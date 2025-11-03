@@ -2,11 +2,11 @@
   "name": "ts-discount",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "discounts.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "start": "ts-node src/index.ts",
+    "start": "ts-node src/discounts.ts",
     "build": "tsc"
   },
   "keywords": [],

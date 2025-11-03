@@ -1,3 +1,4 @@
+// We recommend installing an extension to run jest tests.
 // src/__tests__/discounts.spec.ts
 import {
   fixedAmountCoupon,
@@ -139,5 +140,62 @@ describe('Edge cases & guards', () => {
     ]);
     expect(res.finalTotal).toBe(600);
     expect(res.lines.length).toBe(0);
+  });
+});
+
+describe('Additional tests', () => {
+  test('Points redeem subtracts (no double-negative bug)', () => {
+    const res = calculateFinalPrice(cartA, [pointsRedeem('pts50', 50, 20)]);
+    expect(res.subtotal).toBe(600);
+    expect(res.lines).toHaveLength(1);
+    expect(res.lines[0].kind).toBe('onTop');
+    expect(res.lines[0].amount).toBe(50);
+    expect(res.finalTotal).toBe(550);
+  });
+
+  test('Points redeem is capped by capPercent of running total', () => {
+    // cartB subtotal 2540, cap 10% -> 254 maximum discount
+    const res = calculateFinalPrice(cartB, [pointsRedeem('bigPts', 1000, 10)]);
+    expect(res.lines).toHaveLength(1);
+    expect(res.lines[0].amount).toBe(254);
+    expect(res.finalTotal).toBe(2286);
+  });
+
+  test('Percent off category rounds to 2 decimals', () => {
+    // 12.345% off Clothing (1050) => 129.6225 -> 129.62
+    const res = calculateFinalPrice(cartB, [percentOffCategory('p-round', 'Clothing', 12.345)]);
+    expect(res.lines).toHaveLength(1);
+    expect(res.lines[0].amount).toBe(129.62);
+    expect(res.finalTotal).toBe(2410.38);
+  });
+
+  test('When two coupons give the same discount, only one coupon line is applied', () => {
+    // On cartA, 10% = 60; fixed 60 = 60 -> expect a single coupon of 60
+    const res = calculateFinalPrice(cartA, [
+      fixedAmountCoupon('fix60', 60),
+      percentCoupon('pct10', 10)
+    ]);
+    expect(res.lines.filter(l => l.kind === 'coupon')).toHaveLength(1);
+    expect(res.lines[0].amount).toBe(60);
+    expect(res.finalTotal).toBe(540);
+  });
+
+  test('Seasonal applies correctly after coupons and onTop (order preserved)', () => {
+    // Apply a coupon then an onTop that is chosen over another, then seasonal
+    const res = calculateFinalPrice(cartB, [
+      percentCoupon('c10', 10), // 254 off -> 2286 running
+      percentOffCategory('cloth20', 'Clothing', 20), // clothing base 1050 -> 210 off
+      pointsRedeem('pts500', 500, 50), // huge points but cap 50% of running (1143) -> capped, not chosen
+      thresholdEveryXGetY('s500-30', 500, 30)
+    ]);
+    // Expect order coupon -> onTop -> seasonal
+    expect(res.lines.map(l => l.kind)).toEqual(['coupon', 'onTop', 'seasonal']);
+    // Verify final total computed from running totals with rounding
+    const expectedAfterCoupon = round2(2540 - round2(2540 * 0.1)); // 254 off -> 2286
+    const expectedOnTopDiscount = round2(1050 * 0.2); // 210
+    const afterOnTop = round2(expectedAfterCoupon - expectedOnTopDiscount); // 2076
+    const seasonalBuckets = Math.floor(afterOnTop / 500); // 4 -> 120 off
+    const expectedFinal = round2(Math.max(0, afterOnTop - seasonalBuckets * 30));
+    expect(res.finalTotal).toBe(expectedFinal);
   });
 });

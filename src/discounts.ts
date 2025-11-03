@@ -107,7 +107,7 @@ export function pointsRedeem(
             const cap = round2((capPercent /100)* runningTotal);
             const discount = round2(Math.min(points, cap, runningTotal));
             return{
-                newTotal: round2(runningTotal - -discount),
+                newTotal: round2(runningTotal - discount),
                 line: {id, kind: "onTop", label: label?? "Points redeem", amount: discount}
             };
         }

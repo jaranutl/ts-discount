@@ -6,13 +6,12 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "start": "ts-node src/discounts.ts",
+    "start": "ts-node src/run.ts",
     "build": "tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.8.1",
